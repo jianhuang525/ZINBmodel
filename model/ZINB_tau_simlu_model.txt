@@ -1,0 +1,42 @@
+######################################################################################################
+######################################################################################################
+#### JAGS model file written by runjags version 2.2.1-7 on 2023-07-10 10:47:38.255841 
+######################################################################################################
+######################################################################################################
+
+### Model template as follows - ensure this is syntactically correct before running the model!
+
+model{
+
+# In the BUGS/JAGS language we must use an explicit for loop:
+for(i in 1:N){
+	# These lines describe the response distribution and linear model terms:
+	count[i] ~ dpois(regression_fitted[i])
+	regression_residual[i] <- count[i] - regression_fitted[i]
+	dispersion[i] ~ dgamma(k, k)
+	regression_fitted[i] <- regression_mean[i] * dispersion[i] * non_zero_group[i]
+	# Note: this formulation of a gamma-Poisson is exactly equivalent to a Negative Binomial
+	log(regression_mean[i]) <- intercept + age_coefficient * age[i] + BMIAZ_coefficient * BMIAZ[i] + ethnic_effect[ethnic[i]] 
+	non_zero_group[i] ~  dbern(non_zero_prob[i])
+	logit(non_zero_prob[i]) <-  tau *log(regression_mean[i]) 
+		# Note: this line (inside the parentheses) could specify a separate linear regression
+		# To make this the probability of zero-inflation, the - symbol is required!
+}
+
+# These lines give the prior distributions for the parameters to be estimated:
+k ~ dgamma(0.001, 0.001)
+	# Note: the prior for the diserpsion parameter k is quite important for convergence
+	# [A DuMouchel prior may be better than a Gamma prior]
+intercept ~ dnorm(0, 10^-6)
+ethnic_effect[1] <- 0    # Factor level "W"
+ethnic_effect[2] ~ dnorm(0, 10^-6)    # Factor level "K"
+age_coefficient ~ dnorm(0, 10^-6)
+BMIAZ_coefficient ~ dnorm(0, 10^-6)
+tau ~ dgamma(0.001, 0.001)
+non_zero_propotion <- 1 - 1/(1+(mean(regression_mean))^tau)
+resid.sum.sq <- sum(regression_residual^2)
+}
+
+
+######################################################################################################
+######################################################################################################
